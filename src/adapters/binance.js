@@ -11,10 +11,10 @@ function makeLine(o) {
     const notional = qty * price;
     if (!qty || !price || notional < MIN_NOTIONAL) return null;
     const isSell = o.S === 'SELL';
-    const emoji = isSell ? '🟢' : '🔴';
+    const emoji = isSell ?  '🔴' : '🟢';
     const side = isSell ? 'Long' : 'Short';
     const symbol = (o.s || '').replace(/USDT$/i,'');
-    return `${emoji}  Binance  #${symbol} Liquidated ${side}: $${notional.toLocaleString(undefined,{maximumFractionDigits:0})} at $${fmt(price,2)}`;
+    return `${emoji}  Binance  #${symbol} Liquidated ${side}: $${notional.toLocaleString(undefined,{maximumFractionDigits:0})} at $${price}`;
 }
 
 function start() {

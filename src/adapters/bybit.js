@@ -66,7 +66,7 @@ function connect() {
                 notional
             },
             // Optional display line (so parent can just forward)
-            line: `${side === 'Long' ? '🟢' : '🔴'}  Bybit  #${symbol} Liquidated ${side}: $${Math.round(notional).toLocaleString()} at $${price.toFixed(2)}`
+            line: `${side === 'Long' ?  '🔴': '🟢' }  Bybit  #${symbol} Liquidated ${side}: $${Math.round(notional).toLocaleString()} at $${price.toFixed(2)}`
         });
     };
 
