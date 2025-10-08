@@ -38,7 +38,6 @@ function connect() {
     };
 
     const handleEventRow = (msg, row) => {
-        console.log(row)
         const rawSym = String(row.s || '');
         const symbol = rawSym.replace(/(USDT|USDC)$/i, '');
         const sideStr = row.S; // 'Buy' means long got liquidated, 'Sell' means short got liquidated
@@ -65,7 +64,6 @@ function connect() {
                 qty,
                 notional
             },
-            // Optional display line (so parent can just forward)
             line: `${side === 'Long' ?  '🔴': '🟢' }  Bybit  #${symbol} Liquidated ${side}: $${Math.round(notional).toLocaleString()} at $${price.toFixed(2)}`
         });
     };
