@@ -12,15 +12,21 @@ function fmtNotional(v) {
     return v.toFixed(0);
 }
 function makeLine(o) {
-    const qty   = parseFloat(o.z ?? o.q ?? o.l ?? '0');
+    const notional = getNotional(o);
+    if (notional < MIN_NOTIONAL) return null;
     const price = parseFloat(o.ap ?? o.p ?? '0');
-    const notional = qty * price;
-    if (!qty || !price || notional < MIN_NOTIONAL) return null;
     const isSell = o.S === 'SELL';
     const emoji = isSell ?  '🔴' : '🟢';
     const side = isSell ? 'Long' : 'Short';
     const symbol = (o.s || '').replace(/USDT$/i,'');
     return `${emoji}  Binance  #${symbol} Liquidated ${side}: $${fmtNotional(notional)} at $${price.toFixed(2)}`;
+}
+
+function getNotional(o) {
+    const qty   = parseFloat(o.z ?? o.q ?? o.l ?? '0');
+    const price = parseFloat(o.ap ?? o.p ?? '0');
+    const notional = qty * price;
+    return Number.isFinite(notional) ? notional : 0;
 }
 
 function start() {
@@ -36,7 +42,13 @@ function start() {
                 const evt = JSON.parse(msg);
                 const o = evt.o || {};
                 const line = makeLine(o);
-                if (line) process.send?.({ type:'event', exchange:'binance', line });
+
+                if (line) process.send?.({
+                    type: 'event',
+                    exchange: 'binance',
+                    line,
+                    notional: getNotional(o)
+                });
             } catch (e) {
                 process.send?.({ type:'log', exchange:'binance', level:'error', msg:e.message });
             }
