@@ -5,6 +5,9 @@ const path = require('path');
 const { sendTelegram } = require('./telegram');
 const { tweetLiquidation } = require('./tweet');
 
+const ENABLE_TG  = process.env.ENABLE_TELEGRAM === '1';
+const ENABLE_X   = process.env.ENABLE_X === '1';
+
 function spawnAdapter(name, file, extraEnv={}) {
     const child = fork(path.resolve(__dirname, 'adapters', file), {
         env: { ...process.env, EXCHANGE:name, ...extraEnv },
@@ -17,12 +20,16 @@ function spawnAdapter(name, file, extraEnv={}) {
             const level = msg.level || 'info';
             console[level]?.(`[${name}] ${msg.msg}`) || console.log(`[${name}] ${msg.msg}`);
         } else if (msg.type === 'event' && msg.line) {
-            // sendTelegram(msg.line);
-            tweetLiquidation({
-                text: msg.line,
-                exchange: name,
-                notional: msg.notional
-            });
+            if (ENABLE_TG) {
+                sendTelegram(msg.line);
+            }
+            if (ENABLE_X) {
+                tweetLiquidation({
+                    text: msg.line,
+                    notional: Number(msg.notional) || 0,
+                    exchange: name,
+                });
+            }
         }
     });
 
@@ -36,7 +43,7 @@ function spawnAdapter(name, file, extraEnv={}) {
 
 // Start all exchanges you want:
 spawnAdapter('binance', 'binance.js');
-// spawnAdapter('bybit',   'bybit.js');
+spawnAdapter('bybit',   'bybit.js');
 
 process.on('SIGINT', () => process.exit(0));
 process.on('SIGTERM', () => process.exit(0));
