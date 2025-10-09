@@ -31,7 +31,7 @@ function spawnAdapter(name, file, extraEnv={}) {
                         exchange: name,
                     });
                 }
-                
+
             }
         }
     });
@@ -46,8 +46,8 @@ function spawnAdapter(name, file, extraEnv={}) {
 
 // Start all exchanges you want:
 spawnAdapter('binance', 'binance.js');
-// spawnAdapter('bybit',   'bybit.js');
-// spawnAdapter('okx',   'okx');
+spawnAdapter('bybit',   'bybit.js');
+spawnAdapter('okx',   'okx');
 
 process.on('SIGINT', () => process.exit(0));
 process.on('SIGTERM', () => process.exit(0));

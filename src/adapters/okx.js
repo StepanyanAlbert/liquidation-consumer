@@ -2,10 +2,11 @@
 
 const WebSocket = require('ws');
 const https = require('https');
-const { num, buildLiquidationLine, MIN_NOTIONAL } = require('../utils');
+const { num, buildLiquidationLine } = require('../utils');
 
 const WS_URL = 'wss://ws.okx.com/ws/v5/public';
 const REST_BASE = 'https://www.okx.com/api/v5/public/instruments?instType=';
+const MIN_NOTIONAL = Number(process.env.MIN_NOTIONAL_USD || 100);
 const REFRESH_MS = 30 * 60 * 1000; // refresh instrument specs every 30m
 
 function httpGetJson(url) {

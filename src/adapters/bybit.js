@@ -1,5 +1,5 @@
 const WebSocket = require('ws');
-const { num, buildLiquidationLine, MIN_NOTIONAL } = require('../utils');
+const { num, buildLiquidationLine } = require('../utils');
 
 // ----- Config -----
 const NAME = 'Bybit';
@@ -14,6 +14,7 @@ if (!Array.isArray(SYMBOLS) || SYMBOLS.length === 0) {
     console.warn(`[${NAME}] No symbols provided. Bybit requires per-symbol subscriptions like allLiquidation.BTCUSDT`);
 }
 const ARGS = SYMBOLS.map(s => `allLiquidation.${String(s).toUpperCase()}`);
+const MIN_NOTIONAL = Number(process.env.MIN_NOTIONAL_USD || 100);
 
 function connect() {
     let ws;
