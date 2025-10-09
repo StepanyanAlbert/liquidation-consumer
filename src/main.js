@@ -24,11 +24,14 @@ function spawnAdapter(name, file, extraEnv={}) {
                 sendTelegram(msg.line);
             }
             if (ENABLE_X) {
-                tweetLiquidation({
-                    text: msg.line,
-                    notional: Number(msg.notional) || 0,
-                    exchange: name,
-                });
+                if ( msg.notional > process.env.MIN_NOTIONAL_USD * 10){
+                    tweetLiquidation({
+                        text: msg.line,
+                        notional: msg.notional,
+                        exchange: name,
+                    });
+                }
+                
             }
         }
     });
@@ -43,7 +46,8 @@ function spawnAdapter(name, file, extraEnv={}) {
 
 // Start all exchanges you want:
 spawnAdapter('binance', 'binance.js');
-spawnAdapter('bybit',   'bybit.js');
+// spawnAdapter('bybit',   'bybit.js');
+// spawnAdapter('okx',   'okx');
 
 process.on('SIGINT', () => process.exit(0));
 process.on('SIGTERM', () => process.exit(0));

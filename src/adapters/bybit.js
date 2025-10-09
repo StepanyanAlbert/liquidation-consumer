@@ -1,16 +1,10 @@
-'use strict';
-
 const WebSocket = require('ws');
+const { num, buildLiquidationLine, MIN_NOTIONAL } = require('../utils');
 
 // ----- Config -----
-const NAME = 'bybit';
+const NAME = 'Bybit';
 const URL  = 'wss://stream.bybit.com/v5/public/linear';
 
-// Read env (fall back to defaults)
-const MIN_NOTIONAL_USD = Number(process.env.MIN_NOTIONAL_USD || 100);
-
-// Allow passing symbols via env (comma-separated), or parent can inject via fork env
-// e.g. BYBIT_SYMBOLS="BTCUSDT,ETHUSDT,SOLUSDT"
 const SYM_ENV = (process.env.BYBIT_SYMBOLS || '').trim();
 const SYMBOLS = SYM_ENV
     ? SYM_ENV.split(',').map(s => s.trim()).filter(Boolean)
@@ -38,33 +32,25 @@ function connect() {
     };
 
     const handleEventRow = (msg, row) => {
-        const rawSym = String(row.s || '');
-        const symbol = rawSym.replace(/(USDT|USDC)$/i, '');
-        const sideStr = row.S; // 'Buy' means long got liquidated, 'Sell' means short got liquidated
-        const side = sideStr === 'Buy' ? 'Long' : 'Short';
+        const norm = {
+            exchange: NAME,
+            symbol: String(row.s || '').replace(/(USDT|USDC)$/i, ''),
+            side: row.S === 'Buy' ? 'Long' : 'Short',
+            qty:  num(row.v),
+            price: num(row.p),
+            ts:   row.T || msg.ts || Date.now(),
+        };
+        norm.notional = norm.qty * norm.price;
 
-        const qty   = parseFloat(row.v ?? '0');
-        const price = parseFloat(row.p ?? '0');
-        if (!qty || !price) return;
+        if (!norm.qty || !norm.price || norm.notional < MIN_NOTIONAL) return;
 
-        const notional = qty * price;
-        if (notional < MIN_NOTIONAL_USD) return;
+        const line = buildLiquidationLine(norm);
 
-        const ts = row.T || msg.ts || Date.now();
-
-        // Send normalized event to parent
         process.send?.({
             type: 'event',
-            exchange: NAME,
-            payload: {
-                ts,
-                symbol,
-                side,         // 'Long' | 'Short'
-                price,
-                qty,
-                notional
-            },
-            line: `${side === 'Long' ?  '🔴': '🟢' }  Bybit  #${symbol} Liquidated ${side}: $${Math.round(notional).toLocaleString()} at $${price.toFixed(2)}`
+            exchange: 'bybit',
+            line,
+            notional: norm.notional,
         });
     };
 
@@ -77,7 +63,6 @@ function connect() {
             return;
         }
 
-        // Ping/Pong protocol (JSON). Note: TCP-level pings also used below.
         if (msg.op === 'ping') {
             const pong = msg.ts ? { op: 'pong', ts: msg.ts } : { op: 'pong' };
             try { ws.send(JSON.stringify(pong)); } catch (e) {
@@ -86,7 +71,6 @@ function connect() {
             return;
         }
 
-        // Subscription ack / errors
         if (Object.prototype.hasOwnProperty.call(msg, 'success')) {
             console.log(`[${NAME}] subscribe ack: success=${msg.success} retMsg=${msg.retMsg || ''} code=${msg.code || ''}`);
             if (msg.success === false) {
@@ -95,7 +79,6 @@ function connect() {
             return;
         }
 
-        // Data messages: topic like "allLiquidation.BTCUSDT"
         const topic = typeof msg.topic === 'string' ? msg.topic : '';
         if (!/^allLiquidation\./.test(topic)) return;
         if (!Array.isArray(msg.data)) return;

@@ -1,32 +1,28 @@
 const WebSocket = require('ws');
+const { num, buildLiquidationLine } = require('../utils');
 
 const WS_URL = 'wss://fstream.binance.com/ws/!forceOrder@arr';
 const MIN_NOTIONAL = Number(process.env.MIN_NOTIONAL_USD || 100);
 
 function fmt(n, d=2){ return Number(n).toFixed(d); }
 
-function fmtNotional(v) {
-    if (v >= 1e9) return (v/1e9).toFixed(1) + 'B';
-    if (v >= 1e6) return (v/1e6).toFixed(1) + 'M';
-    if (v >= 1e3) return (v/1e3).toFixed(0) + 'K';
-    return v.toFixed(0);
-}
-function makeLine(o) {
-    const notional = getNotional(o);
-    if (notional < MIN_NOTIONAL) return null;
-    const price = parseFloat(o.ap ?? o.p ?? '0');
-    const isSell = o.S === 'SELL';
-    const emoji = isSell ?  '🔴' : '🟢';
-    const side = isSell ? 'Long' : 'Short';
-    const symbol = (o.s || '').replace(/USDT$/i,'');
-    return `${emoji}  Binance  #${symbol} Liquidated ${side}: $${fmtNotional(notional)} at $${price.toFixed(2)}`;
-}
-
-function getNotional(o) {
-    const qty   = parseFloat(o.z ?? o.q ?? o.l ?? '0');
-    const price = parseFloat(o.ap ?? o.p ?? '0');
+function normalizeBinance(o) {
+    const qty   = num(o.z ?? o.q ?? o.l);
+    const price = num(o.ap ?? o.p);
     const notional = qty * price;
-    return Number.isFinite(notional) ? notional : 0;
+
+    const isSell = o.S === 'SELL'; // SELL => liquidated LONG
+    const symbol = String(o.s || '').replace(/(USDT|USDC)$/i, '');
+
+    return {
+        exchange: 'Binance',
+        symbol,
+        side: isSell ? 'Long' : 'Short',
+        qty,
+        price,
+        notional,
+        ts: num(o.T || o.E || Date.now()),
+    };
 }
 
 function start() {
@@ -41,13 +37,16 @@ function start() {
             try {
                 const evt = JSON.parse(msg);
                 const o = evt.o || {};
-                const line = makeLine(o);
+                const norm = normalizeBinance(o);
 
+                if (!norm.qty || !norm.price || norm.notional < MIN_NOTIONAL) return;
+
+                const line = buildLiquidationLine(norm);
                 if (line) process.send?.({
                     type: 'event',
                     exchange: 'binance',
                     line,
-                    notional: getNotional(o)
+                    notional: norm.notional,
                 });
             } catch (e) {
                 process.send?.({ type:'log', exchange:'binance', level:'error', msg:e.message });
