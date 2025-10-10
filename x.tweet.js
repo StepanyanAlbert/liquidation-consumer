@@ -103,7 +103,7 @@ async function drain() {
 async function postOnce(text) {
     await page.goto('https://x.com/compose/tweet', { waitUntil: 'domcontentloaded' });
 
-    const textBox = page.locator('[data-testid="tweetTextarea_0"], [data-testid="tweetTextarea_1"]').first();
+    const textBox = page.locator('[data-testid="tweetTextarea_0"].public-DraftEditor-content[contenteditable="true"]').first();
     await textBox.waitFor({ timeout: 15000 });
 
     await textBox.click();
