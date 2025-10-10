@@ -15,5 +15,5 @@ export function buildLiquidationLine({ exchange, symbol, side, notional, price }
     const emoji = side === 'Long' ? '🔴' : '🟢';
     const notStr = fmtNotional(notional);
     const pxStr  = Number(price || 0).toLocaleString(undefined, { maximumFractionDigits: 10 });
-    return `${emoji}  ${exchange}  #${symbol} Liquidated ${side}: $${notStr} at $${pxStr}`;
+    return `${emoji} #${symbol} Liquidated ${side}: $${notStr} at $${pxStr} - #${exchange}  `;
 }

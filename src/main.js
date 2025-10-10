@@ -50,10 +50,10 @@ function spawnAdapter(name, file, extraEnv={}) {
     return child;
 }
 
-// Start all exchanges you want:
 spawnAdapter('binance', 'binance.js');
 spawnAdapter('bybit',   'bybit.js');
 spawnAdapter('okx',   'okx.js');
+spawnAdapter('gateio',   'gateio.js');
 
 process.on('SIGINT', () => process.exit(0));
 process.on('SIGTERM', () => process.exit(0));
