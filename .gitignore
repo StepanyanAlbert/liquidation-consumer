@@ -1,3 +1,5 @@
 node_modules/
 .env
 .idea/
+.x-profile
+x-storage-state.json

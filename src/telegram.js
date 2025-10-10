@@ -15,7 +15,7 @@ let sending = false;
 const queue = new PriorityQueue({
     capacity: 500,
     getPriority: (job) => Number(job.notional || 0),
-    tieBreaker: (a, b) => b.ts - a.ts, // newer first if same notional
+    tieBreaker: (a, b) => b.ts - a.ts,
 });
 
 function log(tag) {

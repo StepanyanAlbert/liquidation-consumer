@@ -14,5 +14,8 @@
     "twitter-api-v2": "^1.27.0",
     "undici": "^7.16.0",
     "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.0"
   }
 }

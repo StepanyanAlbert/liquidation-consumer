@@ -3,6 +3,7 @@ import { fork } from 'child_process';
 import dotenv from 'dotenv';
 import path from 'path';
 import {fetchBybitSymbols} from "./fetch-bybit-symbols.js";
+import {enqueueTweet} from "../x.tweet.js";
 
 dotenv.config();
 
@@ -30,14 +31,12 @@ function spawnAdapter(name, file, extraEnv={}) {
                 sendTelegram({ text: msg.line, notional: msg.notional, exhcange: name });
             }
             if (ENABLE_X) {
-                const { tweetLiquidation } = await import('./tweet.js');
-                if ( msg.notional > process.env.MIN_NOTIONAL_USD){
-                    tweetLiquidation({
-                        text: msg.line,
-                        notional: msg.notional,
-                        exchange: name,
-                    });
-                }
+                import {enqueueTweet} from "../x.tweet.js";
+                enqueueTweet({
+                    text: msg.line,
+                    notional: msg.notional,
+                });
+
 
             }
         }
@@ -58,9 +57,9 @@ const bybitSymbols = await fetchBybitSymbols({
 const symbolCsv = bybitSymbols.length ? bybitSymbols.join(',') : (process.env.BYBIT_SYMBOLS || '');
 
 spawnAdapter('binance', 'binance.js');
-spawnAdapter('bybit',   'bybit.js', { BYBIT_SYMBOLS: symbolCsv });
-spawnAdapter('okx',   'okx.js');
-spawnAdapter('gateio',   'gateio.js');
+// spawnAdapter('bybit',   'bybit.js', { BYBIT_SYMBOLS: symbolCsv });
+// spawnAdapter('okx',   'okx.js');
+// spawnAdapter('gateio',   'gateio.js');
 
 process.on('SIGINT', () => process.exit(0));
 process.on('SIGTERM', () => process.exit(0));
