@@ -31,7 +31,7 @@ function spawnAdapter(name, file, extraEnv={}) {
                 sendTelegram({ text: msg.line, notional: msg.notional, exhcange: name });
             }
             if (ENABLE_X) {
-                import {enqueueTweet} from "../x.tweet.js";
+                const  { enqueueTweet } = await  import('../x.tweet.js');
                 enqueueTweet({
                     text: msg.line,
                     notional: msg.notional,
