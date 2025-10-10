@@ -26,7 +26,7 @@ function spawnAdapter(name, file, extraEnv={}) {
         } else if (msg.type === 'event' && msg.line) {
             if (ENABLE_TG) {
                 const { sendTelegram } = await import('./telegram.js');
-                sendTelegram(msg.line);
+                sendTelegram({ text: msg.line, notional: msg.notional, exhcange: name });
             }
             if (ENABLE_X) {
                 const { tweetLiquidation } = await import('./tweet.js');
