@@ -1,9 +1,13 @@
-require('dotenv').config();
+import { fileURLToPath } from 'url';
+import { fork } from 'child_process';
+import dotenv from 'dotenv';
+import path from 'path';
 
-const { fork } = require('child_process');
-const path = require('path');
-const { sendTelegram } = require('./telegram');
-const { tweetLiquidation } = require('./tweet');
+dotenv.config();
+
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
 
 const ENABLE_TG  = process.env.ENABLE_TELEGRAM === '1';
 const ENABLE_X   = process.env.ENABLE_X === '1';
@@ -14,16 +18,18 @@ function spawnAdapter(name, file, extraEnv={}) {
         stdio: ['inherit','inherit','inherit','ipc']
     });
 
-    child.on('message', (msg) => {
+    child.on('message', async (msg) => {
         if (!msg || typeof msg !== 'object') return;
         if (msg.type === 'log') {
             const level = msg.level || 'info';
             console[level]?.(`[${name}] ${msg.msg}`) || console.log(`[${name}] ${msg.msg}`);
         } else if (msg.type === 'event' && msg.line) {
             if (ENABLE_TG) {
+                const { sendTelegram } = await import('./telegram.js');
                 sendTelegram(msg.line);
             }
             if (ENABLE_X) {
+                const { tweetLiquidation } = await import('./tweet.js');
                 if ( msg.notional > process.env.MIN_NOTIONAL_USD * 10){
                     tweetLiquidation({
                         text: msg.line,
@@ -47,7 +53,7 @@ function spawnAdapter(name, file, extraEnv={}) {
 // Start all exchanges you want:
 spawnAdapter('binance', 'binance.js');
 spawnAdapter('bybit',   'bybit.js');
-spawnAdapter('okx',   'okx');
+spawnAdapter('okx',   'okx.js');
 
 process.on('SIGINT', () => process.exit(0));
 process.on('SIGTERM', () => process.exit(0));

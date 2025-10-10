@@ -1,5 +1,5 @@
-const WebSocket = require('ws');
-const { num, buildLiquidationLine } = require('../utils');
+import WebSocket from 'ws';
+import { num, buildLiquidationLine } from '../utils.js';
 
 const WS_URL = 'wss://fstream.binance.com/ws/!forceOrder@arr';
 const MIN_NOTIONAL = Number(process.env.MIN_NOTIONAL_USD || 100);

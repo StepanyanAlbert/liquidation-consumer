@@ -1,7 +1,6 @@
-// src/adapters/hyperliquid.js
-'use strict';
 
-const WebSocket = require('ws');
+
+import WebSocket from 'ws';
 
 const NAME = 'hyperliquid';
 const URL  = process.env.HL_WS_URL || 'wss://api.hyperliquid.xyz/ws';

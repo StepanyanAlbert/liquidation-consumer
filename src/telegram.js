@@ -1,72 +1,76 @@
 import https from 'https';
 import { fetch, Agent, setGlobalDispatcher } from 'undici';
+import  { PriorityQueue } from './priority-queue.js';
 
 const dispatcher = new Agent({ connections: 50, keepAliveTimeout: 60_000 });
 setGlobalDispatcher(dispatcher);
 
-const queue = [];
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
 
-let sending = false;
-let pausedUntil = 0;
 const SEND_INTERVAL_MS = 1200;
+let pausedUntil = 0;
+let sending = false;
 
-export function fmtNotional(v) {
-    if (v >= 1e9) return (v / 1e9).toFixed(2) + 'B';
-    if (v >= 1e6) return (v / 1e6).toFixed(2) + 'M';
-    if (v >= 1e3) return (v / 1e3).toFixed(1) + 'K';
-    return v.toFixed(2);
+const queue = new PriorityQueue({
+    capacity: 500,
+    getPriority: (job) => Number(job.notional || 0),
+    tieBreaker: (a, b) => b.ts - a.ts, // newer first if same notional
+});
+
+function log(tag) {
+    const paused = pausedUntil && Date.now() < pausedUntil;
+    console.log(`[tg][${tag}] q=${queue.size()} paused=${paused ? new Date(pausedUntil).toISOString() : 0}`);
 }
 
-export async function sendTelegram(text) {
-    queue.push(text);
-    if (sending) return;
-    sending = true;
+export async function sendTelegram({ text, notional = 0 }) {
+    if (!BOT_TOKEN || !CHAT_ID) return;
 
-    (async function drain() {
-        const now = Date.now();
-        if (now < pausedUntil) {
-            return setTimeout(drain, pausedUntil - now);
-        }
+    const res = queue.enqueue({ text, notional, ts: Date.now() });
+    log('enqueue');
 
-        const item = queue.shift();
-        if (!item) { sending = false; return; }
+    if (!sending) {
+        sending = true;
+        drain();
+    }
+}
 
-        try {
-            const agent = new https.Agent({ keepAlive: true, maxSockets: 50 });
-            const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: CHAT_ID,
-                    text: item,
-                    disable_web_page_preview: true,
-                })
-            });
+async function drain() {
+    const now = Date.now();
+    if (pausedUntil && now < pausedUntil) {
+        setTimeout(drain, pausedUntil - now);
+        return;
+    }
 
-            if (!r.ok) {
-                const bodyText = await r.text().catch(() => '');
-                let retryAfter = 0;
-                try {
-                    const body = JSON.parse(bodyText);
-                    retryAfter = body?.parameters?.retry_after
-                        ? Number(body.parameters.retry_after) * 1000
-                        : 0;
-                } catch {}
+    const job = queue.dequeue();
+    if (!job) { sending = false; return; }
 
-                if (r.status === 429 && retryAfter > 0) {
-                    console.error('[tg] 429. Pausing for', retryAfter, 'ms');
-                    queue.unshift(item);
-                    pausedUntil = Date.now() + retryAfter;
-                } else {
-                    console.error('[tg] send error', r.status, bodyText.slice(0, 300));
-                }
+    try {
+        const agent = new https.Agent({ keepAlive: true, maxSockets: 50 });
+        const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type':'application/json' },
+            body: JSON.stringify({ chat_id: CHAT_ID, text: job.text, disable_web_page_preview: true }),
+        });
+
+        if (!r.ok) {
+            const txt = await r.text().catch(()=> '');
+            let retryAfter = 0;
+            try {
+                const body = JSON.parse(txt);
+                retryAfter = body?.parameters?.retry_after ? Number(body.parameters.retry_after) * 1000 : 0;
+            } catch {}
+            if (r.status === 429 && retryAfter > 0) {
+                pausedUntil = Date.now() + retryAfter;
+                queue.enqueue(job);
+                log(`429_pause_${retryAfter}ms`);
+            } else {
+                console.error('[tg] send error', r.status, txt.slice(0, 300));
             }
-        } catch (e) {
-            console.error('[tg] fetch error:', e);
         }
+    } catch (e) {
+        console.error('[tg] fetch error:', e.message);
+    }
 
-        setTimeout(drain, SEND_INTERVAL_MS);
-    })();
+    setTimeout(drain, SEND_INTERVAL_MS);
 }

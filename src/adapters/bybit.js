@@ -1,5 +1,5 @@
-const WebSocket = require('ws');
-const { num, buildLiquidationLine } = require('../utils');
+import WebSocket from 'ws';
+import { num, buildLiquidationLine } from '../utils.js';
 
 // ----- Config -----
 const NAME = 'Bybit';

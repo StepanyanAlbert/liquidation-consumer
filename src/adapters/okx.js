@@ -1,8 +1,8 @@
 'use strict';
 
-const WebSocket = require('ws');
-const https = require('https');
-const { num, buildLiquidationLine } = require('../utils');
+import WebSocket from 'ws';
+import  https from 'https';
+import { num, buildLiquidationLine } from '../utils.js';
 
 const WS_URL = 'wss://ws.okx.com/ws/v5/public';
 const REST_BASE = 'https://www.okx.com/api/v5/public/instruments?instType=';
