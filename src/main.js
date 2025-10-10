@@ -30,7 +30,7 @@ function spawnAdapter(name, file, extraEnv={}) {
             }
             if (ENABLE_X) {
                 const { tweetLiquidation } = await import('./tweet.js');
-                if ( msg.notional > process.env.MIN_NOTIONAL_USD * 10){
+                if ( msg.notional > process.env.MIN_NOTIONAL_USD){
                     tweetLiquidation({
                         text: msg.line,
                         notional: msg.notional,
