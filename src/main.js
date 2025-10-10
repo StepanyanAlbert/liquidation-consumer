@@ -2,6 +2,7 @@ import { fileURLToPath } from 'url';
 import { fork } from 'child_process';
 import dotenv from 'dotenv';
 import path from 'path';
+import {fetchBybitSymbols} from "./fetch-bybit-symbols.js";
 
 dotenv.config();
 
@@ -49,9 +50,15 @@ function spawnAdapter(name, file, extraEnv={}) {
 
     return child;
 }
+const bybitSymbols = await fetchBybitSymbols({
+    category: 'linear',
+    quote: 'USDT'
+});
+
+const symbolCsv = bybitSymbols.length ? bybitSymbols.join(',') : (process.env.BYBIT_SYMBOLS || '');
 
 spawnAdapter('binance', 'binance.js');
-spawnAdapter('bybit',   'bybit.js');
+spawnAdapter('bybit',   'bybit.js', { BYBIT_SYMBOLS: symbolCsv });
 spawnAdapter('okx',   'okx.js');
 spawnAdapter('gateio',   'gateio.js');
 

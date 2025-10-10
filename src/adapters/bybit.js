@@ -24,7 +24,7 @@ function connect() {
     const subscribe = () => {
         if (ARGS.length === 0) return;
         const sub = { op: 'subscribe', args: ARGS };
-        console.log(`[${NAME}] sending subscribe: ${JSON.stringify(sub)}`);
+        console.log(`[${NAME}] sending subscribe for total: ${ARGS.length} coins`);
         try {
             ws.send(JSON.stringify(sub));
         } catch (e) {
